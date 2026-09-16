@@ -41,7 +41,7 @@ xcode-select --install
    open dist/AgentMeter.app
    ```
 
-3. The first launch may ask for Keychain access (Claude and Muse store tokens there). Choose **Always Allow**.
+3. The first launch may ask for Keychain access (Claude and Muse store tokens there). The prompt may name `security` (the system Keychain tool the app shells out to). Choose **Always Allow** and it will never ask again.
 
 4. Look at the right side of the menu bar for a percent (or `…` while it loads). Click it.
 

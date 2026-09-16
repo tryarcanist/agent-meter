@@ -1,12 +1,34 @@
 import Foundation
+import LocalAuthentication
 import Security
+import os
 
 enum Secrets {
-    static func keychainPassword(service: String, account: String? = nil) -> String? {
-        secItem(service: service, account: account) ?? securityCLI(service: service, account: account)
+    private struct Cache {
+        var hits: [String: String] = [:]
+        var misses: Set<String> = []
     }
 
-    private static func secItem(service: String, account: String?) -> String? {
+    private static let cache = OSAllocatedUnfairLock(initialState: Cache())
+
+    static func resetCache() {
+        cache.withLock { $0 = Cache() }
+    }
+
+    static func keychainPassword(service: String, account: String? = nil) -> String? {
+        let key = "\(service)\u{0}\(account ?? "")"
+        if let hit = cache.withLock({ $0.hits[key] }) { return hit }
+        if cache.withLock({ $0.misses.contains(key) }) { return nil }
+        let value = secItem(service: service, account: account, prompt: false)
+            ?? securityCLI(service: service, account: account)
+            ?? secItem(service: service, account: account, prompt: true)
+        cache.withLock {
+            if let value { $0.hits[key] = value } else { $0.misses.insert(key) }
+        }
+        return value
+    }
+
+    private static func secItem(service: String, account: String?, prompt: Bool) -> String? {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -14,6 +36,11 @@ enum Secrets {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         if let account { query[kSecAttrAccount as String] = account }
+        if !prompt {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = context
+        }
         var result: AnyObject?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
               let data = result as? Data

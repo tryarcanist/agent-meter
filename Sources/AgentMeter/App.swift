@@ -48,6 +48,7 @@ final class MenuBar: NSObject, NSApplicationDelegate {
     }
 
     @objc private func refresh() {
+        Collect.resetCredentialCache()
         providers = ProviderID.allCases.map { .loading($0) }
         render()
         fetchAll()

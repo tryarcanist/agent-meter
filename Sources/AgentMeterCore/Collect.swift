@@ -1,6 +1,10 @@
 import Foundation
 
 public enum Collect {
+    public static func resetCredentialCache() {
+        Secrets.resetCache()
+    }
+
     public static func one(_ id: ProviderID) async -> ProviderSnapshot {
         switch id {
         case .claude: await timed(.claude) { await Claude.collect() }
