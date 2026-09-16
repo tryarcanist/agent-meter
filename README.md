@@ -1,18 +1,18 @@
 # agent-meter
 
-macOS menu bar extra that shows usage limits for Claude, Codex, Grok, Muse, and Devin.
+macOS menu bar extra that shows usage limits for Claude, Codex, Grok, and Devin.
 
 The bar is the highest **used** percent across every quota window it can read. Click it for each provider and the limits that vendor actually returned. No plan names, no emails, no web app.
 
 Your tokens stay on your machine. The only network calls are usage requests to the vendor you already signed into with that CLI.
 
-Not affiliated with Anthropic, OpenAI, xAI, Meta, or Cognition.
+Not affiliated with Anthropic, OpenAI, xAI, or Cognition.
 
 ## Requirements
 
 - macOS 13 or later
 - Swift 5.9+ (Xcode or Command Line Tools)
-- At least one of: Claude Code, Codex CLI, Grok Build, Muse Code, Devin CLI, already signed in
+- At least one of: Claude Code, Codex CLI, Grok Build, Devin CLI, already signed in
 
 Install Command Line Tools if `swift` is missing:
 
@@ -28,7 +28,6 @@ xcode-select --install
    claude          # Claude Code
    codex           # or: codex auth
    grok
-   muse login
    devin
    ```
 
@@ -41,7 +40,7 @@ xcode-select --install
    open dist/AgentMeter.app
    ```
 
-3. The first launch may ask for Keychain access (Claude and Muse store tokens there). The prompt may name `security` (the system Keychain tool the app shells out to). Choose **Always Allow** and it will never ask again.
+3. The first launch may ask for Keychain access (Claude stores its token there). The prompt may name `security` (the system Keychain tool the app shells out to). Choose **Always Allow** and it will never ask again.
 
 4. Look at the right side of the menu bar for a percent (or `…` while it loads). Click it.
 
@@ -56,8 +55,6 @@ The menu bar is `max(used percent)` over every window currently returned.
 Example: Claude might report `5h 31%`, `7d 33%`, and `Fable 56%`. The bar shows **56%**. That is the weekly cap for the Fable model family, not “all Claude usage” and not remaining quota.
 
 Open the menu to see each window, used percent, and time until reset.
-
-Muse often returns a signed-in account with **no limits**. That matches Muse’s own `/usage` panel when it says subscription usage is unavailable.
 
 ## JSON (no menu)
 
@@ -78,7 +75,6 @@ swift run ParserProbe
 | Claude | Keychain `Claude Code-credentials` or `~/.claude/.credentials.json` | `GET https://api.anthropic.com/api/oauth/usage` |
 | Codex | `~/.codex/auth.json` | `GET https://chatgpt.com/backend-api/wham/usage` |
 | Grok | `~/.grok/auth.json` | `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` |
-| Muse | Keychain `ai.meta.dev.credentials` or `~/.config/muse/auth.json` | `POST https://api.meta.ai/muse-code/key` |
 | Devin | `~/.local/share/devin/credentials.toml` | Cognition `GetUserStatus` |
 
 Those usage APIs are what the CLIs already call. They can change without notice.

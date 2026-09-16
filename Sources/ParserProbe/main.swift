@@ -77,26 +77,6 @@ func testGrok() {
     expect(snapshot.windows.first?.label == "7d", "grok label")
 }
 
-func testMuse() {
-    let empty = Muse.parse(["is_subs_active": true])
-    expect(empty.windows.isEmpty, "muse empty windows")
-    expect(empty.message == "no limits", "muse no limits")
-    let body: [String: Any] = [
-        "is_subs_active": true,
-        "subs_usage": [
-            "window": [
-                "used_percent": 4,
-                "window_duration_mins": 300,
-                "resets_at": 1_789_068_250,
-            ],
-            "weekly": ["used_percent": 28, "resets_at": 1_789_344_000],
-        ],
-    ]
-    let snapshot = Muse.parse(body)
-    expect(snapshot.windows.map(\.label) == ["5h", "7d"], "muse labels")
-    expect(snapshot.windows.last?.usedPercent == 28, "muse weekly")
-}
-
 func testDevin() {
     let body: [String: Any] = [
         "userStatus": [
@@ -116,7 +96,6 @@ func testDevin() {
 testClaude()
 testCodex()
 testGrok()
-testMuse()
 testDevin()
 if failed != 0 {
     print("\(failed) failed")

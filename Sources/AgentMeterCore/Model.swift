@@ -1,14 +1,13 @@
 import Foundation
 
 public enum ProviderID: String, CaseIterable, Sendable {
-    case claude, codex, grok, muse, devin
+    case claude, codex, grok, devin
 
     public var title: String {
         switch self {
         case .claude: "Claude"
         case .codex: "Codex"
         case .grok: "Grok"
-        case .muse: "Muse"
         case .devin: "Devin"
         }
     }

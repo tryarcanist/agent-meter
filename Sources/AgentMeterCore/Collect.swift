@@ -10,7 +10,6 @@ public enum Collect {
         case .claude: await timed(.claude) { await Claude.collect() }
         case .codex: await timed(.codex) { await Codex.collect() }
         case .grok: await timed(.grok) { await Grok.collect() }
-        case .muse: await timed(.muse) { await Muse.collect() }
         case .devin: await timed(.devin) { await Devin.collect() }
         }
     }
