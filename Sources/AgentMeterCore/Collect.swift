@@ -3,11 +3,11 @@ import Foundation
 public enum Collect {
     public static func one(_ id: ProviderID) async -> ProviderSnapshot {
         switch id {
-        case .claude: await timed(.claude, Claude.collect)
-        case .codex: await timed(.codex, Codex.collect)
-        case .grok: await timed(.grok, Grok.collect)
-        case .muse: await timed(.muse, Muse.collect)
-        case .devin: await timed(.devin, Devin.collect)
+        case .claude: await timed(.claude) { await Claude.collect() }
+        case .codex: await timed(.codex) { await Codex.collect() }
+        case .grok: await timed(.grok) { await Grok.collect() }
+        case .muse: await timed(.muse) { await Muse.collect() }
+        case .devin: await timed(.devin) { await Devin.collect() }
         }
     }
 
@@ -29,14 +29,13 @@ public enum Collect {
         _ work: @escaping @Sendable () async -> ProviderSnapshot
     ) async -> ProviderSnapshot {
         await withTaskGroup(of: ProviderSnapshot.self) { group in
-            group.addTask { await work() }
+            group.addTask(operation: work)
             group.addTask {
                 try? await Task.sleep(nanoseconds: 15_000_000_000)
                 return .error(id, "timeout")
             }
-            let first = await group.next() ?? .error(id, "timeout")
-            group.cancelAll()
-            return first
+            defer { group.cancelAll() }
+            return await group.next() ?? .error(id, "timeout")
         }
     }
 
@@ -44,7 +43,7 @@ public enum Collect {
         providers
             .filter { $0.status == .ok }
             .flatMap(\.windows)
-            .max(by: { $0.usedPercent < $1.usedPercent })
+            .max { $0.usedPercent < $1.usedPercent }
     }
 
     public static func json(_ providers: [ProviderSnapshot]) throws -> Data {
@@ -53,19 +52,19 @@ public enum Collect {
                 "id": provider.id.rawValue,
                 "name": provider.id.title,
                 "status": provider.status.rawValue,
+                "windows": provider.windows.map { window in
+                    var item: [String: Any] = [
+                        "label": window.label,
+                        "usedPercent": window.usedPercent,
+                    ]
+                    if let resets = window.resetsAt {
+                        item["resetsAt"] = ISO8601DateFormatter.plain.string(from: resets)
+                    }
+                    return item
+                },
             ]
             if let message = provider.message {
                 row["message"] = message
-            }
-            row["windows"] = provider.windows.map { window in
-                var item: [String: Any] = [
-                    "label": window.label,
-                    "usedPercent": window.usedPercent,
-                ]
-                if let resets = window.resetsAt {
-                    item["resetsAt"] = ISO8601DateFormatter.plain.string(from: resets)
-                }
-                return item
             }
             return row
         }

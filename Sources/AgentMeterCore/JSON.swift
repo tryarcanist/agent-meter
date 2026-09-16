@@ -10,9 +10,10 @@ enum JSON {
     }
 
     static func string(_ value: Any?) -> String? {
-        guard let value = value as? String else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        (value as? String).flatMap { s in
+            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
     }
 
     static func bool(_ value: Any?) -> Bool? {
@@ -20,41 +21,27 @@ enum JSON {
     }
 
     static func number(_ value: Any?) -> Double? {
-        if let n = value as? NSNumber {
-            return n.doubleValue
-        }
-        if let s = string(value), let d = Double(s) {
-            return d
-        }
-        return nil
+        if let n = value as? NSNumber { return n.doubleValue }
+        return string(value).flatMap(Double.init)
     }
 
     static func field(_ object: [String: Any], _ keys: String...) -> Any? {
-        for key in keys where object[key] != nil {
-            return object[key]
-        }
-        return nil
+        keys.lazy.compactMap { object[$0] }.first
     }
 
     static func child(_ object: [String: Any], _ keys: String...) -> [String: Any]? {
-        for key in keys {
-            if let child = object[key] as? [String: Any] {
-                return child
-            }
-        }
-        return nil
+        keys.lazy.compactMap { object[$0] as? [String: Any] }.first
     }
 
     static func walkObjects(_ value: Any?) -> [[String: Any]] {
         var found: [[String: Any]] = []
         func visit(_ node: Any?) {
             if let arr = node as? [Any] {
-                arr.forEach { visit($0) }
-                return
+                arr.forEach(visit)
+            } else if let obj = node as? [String: Any] {
+                found.append(obj)
+                obj.values.forEach(visit)
             }
-            guard let obj = node as? [String: Any] else { return }
-            found.append(obj)
-            obj.values.forEach { visit($0) }
         }
         visit(value)
         return found
@@ -65,23 +52,16 @@ enum JSON {
     }
 
     static func parseFile(_ url: URL) -> Any? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return parse(data)
+        (try? Data(contentsOf: url)).flatMap(parse)
     }
 
     static func date(_ value: Any?) -> Date? {
         if let n = number(value) {
-            let seconds = n > 1_000_000_000_000 ? n / 1000 : n
-            return Date(timeIntervalSince1970: seconds)
+            return Date(timeIntervalSince1970: n > 1_000_000_000_000 ? n / 1000 : n)
         }
-        if let s = string(value) {
-            if let n = Double(s), s.allSatisfy({ $0.isNumber || $0 == "." }) {
-                return date(n)
-            }
-            return ISO8601DateFormatter.withFraction.date(from: s)
-                ?? ISO8601DateFormatter.plain.date(from: s)
-        }
-        return nil
+        guard let s = string(value) else { return nil }
+        return ISO8601DateFormatter.withFraction.date(from: s)
+            ?? ISO8601DateFormatter.plain.date(from: s)
     }
 }
 
@@ -100,11 +80,9 @@ extension ISO8601DateFormatter {
 }
 
 enum Paths {
-    static var home: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-    }
-
     static func home(_ parts: String...) -> URL {
-        parts.reduce(home) { $0.appendingPathComponent($1) }
+        parts.reduce(FileManager.default.homeDirectoryForCurrentUser) {
+            $0.appendingPathComponent($1)
+        }
     }
 }

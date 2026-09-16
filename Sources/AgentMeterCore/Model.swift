@@ -1,11 +1,7 @@
 import Foundation
 
 public enum ProviderID: String, CaseIterable, Sendable {
-    case claude
-    case codex
-    case grok
-    case muse
-    case devin
+    case claude, codex, grok, muse, devin
 
     public var title: String {
         switch self {
@@ -28,15 +24,10 @@ public struct UsageWindow: Sendable, Equatable {
         self.usedPercent = min(100, max(0, usedPercent))
         self.resetsAt = resetsAt
     }
-
-    public var remainingPercent: Double { 100 - usedPercent }
 }
 
 public enum ProviderStatus: String, Sendable {
-    case loading
-    case ok
-    case signedOut
-    case error
+    case loading, ok, signedOut, error
 }
 
 public struct ProviderSnapshot: Sendable {
@@ -45,12 +36,7 @@ public struct ProviderSnapshot: Sendable {
     public var windows: [UsageWindow]
     public var message: String?
 
-    public init(
-        id: ProviderID,
-        status: ProviderStatus,
-        windows: [UsageWindow] = [],
-        message: String? = nil
-    ) {
+    public init(id: ProviderID, status: ProviderStatus, windows: [UsageWindow] = [], message: String? = nil) {
         self.id = id
         self.status = status
         self.windows = windows
@@ -81,22 +67,21 @@ public enum WindowMath {
     }
 
     public static func label(seconds: Double) -> String {
-        let s = seconds
-        if abs(s - 5 * 3600) <= 5 * 60 { return "5h" }
-        if abs(s - 24 * 3600) <= 30 * 60 { return "1d" }
-        if abs(s - 7 * 24 * 3600) <= 3 * 3600 { return "7d" }
-        if abs(s - 30 * 24 * 3600) <= 2 * 24 * 3600 { return "30d" }
-        if s.truncatingRemainder(dividingBy: 24 * 3600) == 0 {
-            return "\(Int(s / (24 * 3600)))d"
+        if abs(seconds - 5 * 3600) <= 5 * 60 { return "5h" }
+        if abs(seconds - 24 * 3600) <= 30 * 60 { return "1d" }
+        if abs(seconds - 7 * 24 * 3600) <= 3 * 3600 { return "7d" }
+        if abs(seconds - 30 * 24 * 3600) <= 2 * 24 * 3600 { return "30d" }
+        if seconds.truncatingRemainder(dividingBy: 24 * 3600) == 0 {
+            return "\(Int(seconds / (24 * 3600)))d"
         }
-        if s.truncatingRemainder(dividingBy: 3600) == 0 {
-            return "\(Int(s / 3600))h"
+        if seconds.truncatingRemainder(dividingBy: 3600) == 0 {
+            return "\(Int(seconds / 3600))h"
         }
-        return "\(Int((s / 60).rounded()))m"
+        return "\(Int((seconds / 60).rounded()))m"
     }
 
     public static func remainingToUsed(_ remaining: Double) -> Double? {
-        guard remaining.isFinite, remaining >= 0, remaining <= 100 else { return nil }
+        guard remaining.isFinite, (0...100).contains(remaining) else { return nil }
         return 100 - remaining
     }
 }

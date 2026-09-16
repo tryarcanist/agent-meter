@@ -5,14 +5,14 @@ struct HTTPError: Error {
 }
 
 enum HTTP {
-    private static let session: URLSession = {
+    private static let session = URLSession(configuration: {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 12
         config.timeoutIntervalForResource = 15
         config.waitsForConnectivity = false
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
-        return URLSession(configuration: config, delegate: nil, delegateQueue: OperationQueue())
-    }()
+        return config
+    }())
 
     static func json(
         url: String,
@@ -21,33 +21,21 @@ enum HTTP {
         body: Any? = nil,
         form: String? = nil
     ) async throws -> Any {
-        guard let parsed = URL(string: url) else {
-            throw HTTPError(status: 0)
-        }
-        var request = URLRequest(url: parsed, timeoutInterval: 15)
+        guard let url = URL(string: url) else { throw HTTPError(status: 0) }
+        var request = URLRequest(url: url, timeoutInterval: 15)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        for (key, value) in headers {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
+        headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
         if let form {
-            request.setValue(
-                "application/x-www-form-urlencoded",
-                forHTTPHeaderField: "Content-Type"
-            )
-            request.httpBody = form.data(using: .utf8)
+            request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+            request.httpBody = Data(form.utf8)
         } else if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        if status < 200 || status >= 300 {
-            throw HTTPError(status: status)
-        }
-        if data.isEmpty {
-            return [String: Any]()
-        }
-        return try JSONSerialization.jsonObject(with: data)
+        guard (200..<300).contains(status) else { throw HTTPError(status: status) }
+        return data.isEmpty ? [String: Any]() : try JSONSerialization.jsonObject(with: data)
     }
 }

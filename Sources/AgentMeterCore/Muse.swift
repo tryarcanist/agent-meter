@@ -4,32 +4,22 @@ public enum Muse {
     static let keyURL = "https://api.meta.ai/muse-code/key"
 
     public static func parse(_ body: Any) -> ProviderSnapshot {
-        guard let record = JSON.object(body) else {
-            return .error(.muse, "bad response")
-        }
+        guard let record = JSON.object(body) else { return .error(.muse, "bad response") }
         if JSON.bool(record["is_subs_active"]) == false {
             return .ok(.muse, windows: [], message: "no limits")
         }
         let usage = JSON.child(record, "subs_usage", "subsUsage") ?? [:]
-        var windows: [UsageWindow] = []
-        if let window = parseWindow(usage["window"], fallback: "5h") {
-            windows.append(window)
-        }
-        if let weekly = parseWindow(usage["weekly"], fallback: "7d") {
-            windows.append(weekly)
-        }
-        if windows.isEmpty {
-            return .ok(.muse, windows: [], message: "no limits")
-        }
-        return .ok(.muse, windows: windows)
+        let windows = [
+            parseWindow(usage["window"], fallback: "5h"),
+            parseWindow(usage["weekly"], fallback: "7d"),
+        ].compactMap { $0 }
+        return .ok(.muse, windows: windows, message: windows.isEmpty ? "no limits" : nil)
     }
 
     public static func collect() async -> ProviderSnapshot {
-        guard let token = readToken() else {
-            return .signedOut(.muse)
-        }
+        guard let token = readToken() else { return .signedOut(.muse) }
         do {
-            let body = try await HTTP.json(
+            return parse(try await HTTP.json(
                 url: keyURL,
                 method: "POST",
                 headers: [
@@ -37,8 +27,7 @@ public enum Muse {
                     "x-api-version": "1.0.0",
                 ],
                 body: [String: Any]()
-            )
-            return parse(body)
+            ))
         } catch let error as HTTPError where error.status == 401 || error.status == 403 {
             return .signedOut(.muse)
         } catch {
@@ -72,14 +61,9 @@ public enum Muse {
         {
             return token
         }
-        guard let secret = Secrets.keychainPassword(
-            service: "ai.meta.dev.credentials",
-            account: "meta"
-        ), let data = secret.data(using: .utf8),
-            let json = JSON.object(JSON.parse(data))
-        else {
-            return nil
-        }
-        return JSON.string(JSON.field(json, "access_token", "accessToken"))
+        guard let secret = Secrets.keychainPassword(service: "ai.meta.dev.credentials", account: "meta"),
+              let data = secret.data(using: .utf8)
+        else { return nil }
+        return JSON.string(JSON.field(JSON.object(JSON.parse(data)) ?? [:], "access_token", "accessToken"))
     }
 }
