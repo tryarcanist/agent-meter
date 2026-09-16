@@ -40,7 +40,7 @@ xcode-select --install
    open dist/AgentMeter.app
    ```
 
-3. The first launch may ask for Keychain access (Claude stores its token there). The prompt may name `security` (the system Keychain tool the app shells out to). Choose **Always Allow** and it will never ask again.
+3. The first launch may ask for Keychain access (Claude stores its token there). Choose **Always Allow**. Run `scripts/make-signing-identity.sh` once before building so `build-app.sh` signs the app with a stable self-signed identity — without it, each rebuild invalidates the grant and the prompt returns.
 
 4. Look at the right side of the menu bar for a percent (or `…` while it loads). Click it.
 

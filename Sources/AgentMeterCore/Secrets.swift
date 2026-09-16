@@ -59,7 +59,7 @@ enum Secrets {
         proc.standardError = Pipe()
         proc.standardInput = FileHandle.nullDevice
         do { try proc.run() } catch { return nil }
-        let deadline = Date().addingTimeInterval(3)
+        let deadline = Date().addingTimeInterval(60)
         while proc.isRunning, Date() < deadline {
             Thread.sleep(forTimeInterval: 0.05)
         }
